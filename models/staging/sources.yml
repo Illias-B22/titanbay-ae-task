@@ -1,0 +1,60 @@
+version: 2
+
+sources:
+  - name: freshdesk
+    description: >
+      Support ticket data exported from Freshdesk, Titanbay's customer support tool.
+      Tickets are raised by investors or relationship managers via the platform.
+    tables:
+      - name: freshdesk_tickets
+        description: One row per support ticket. 2,000 rows.
+        columns:
+          - name: ticket_id
+            description: Freshdesk ticket reference number (integer)
+          - name: requester_email
+            description: >
+              Email of the person who raised the ticket. This is the ONLY link
+              to the platform data — there is no shared foreign key. Requires
+              email-based entity resolution against platform_investors and
+              platform_relationship_managers.
+          - name: requester_name
+            description: Free-text name as entered in Freshdesk
+          - name: subject
+            description: Ticket subject line
+          - name: status
+            description: "open | pending | resolved | closed"
+          - name: priority
+            description: "low | medium | high | urgent"
+          - name: created_at
+            description: >
+              Ticket creation timestamp. STORED AS EXCEL SERIAL NUMBER.
+              Must be converted: dateadd('day', value::int, '1899-12-30').
+          - name: resolved_at
+            description: Resolution timestamp. Null for unresolved tickets. Also Excel serial.
+          - name: tags
+            description: Comma-separated tags e.g. "kyc,payment,documents"
+          - name: partner_label
+            description: >
+              Manually entered partner label. ~44% null. Highly inconsistent —
+              70+ variants exist for 15 partners (mixed case, abbreviations, truncations).
+              Not reliable as a join key. Use as fallback only, normalised via seed.
+
+  - name: platform
+    description: >
+      Titanbay's platform data warehouse. Contains structured data about partners,
+      relationship managers, investors, entities, and fund closes.
+    tables:
+      - name: platform_partners
+        description: 15 rows. One row per partner organisation.
+      - name: platform_relationship_managers
+        description: 42 rows. One row per RM employed by a partner.
+      - name: platform_investors
+        description: >
+          1,253 rows. One row per investor. created_at stored as Excel serial number.
+          relationship_manager_id is nullable (~41% null = self-directed investors).
+      - name: platform_entities
+        description: 772 rows. Legal vehicles through which commitments are made.
+      - name: platform_fund_closes
+        description: >
+          153 rows. One row per fund close (tranche). scheduled_close_date stored
+          as Excel serial number. close_status includes 'cancelled' (undocumented).

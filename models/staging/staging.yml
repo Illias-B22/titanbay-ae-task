@@ -1,0 +1,115 @@
+version: 2
+
+models:
+  - name: stg_freshdesk_tickets
+    description: >
+      Cleaned Freshdesk tickets. One row per ticket. Excel serial dates converted
+      to timestamps. partner_label normalised to lowercase. Internal tickets flagged.
+    columns:
+      - name: ticket_id
+        tests:
+          - unique
+          - not_null
+      - name: requester_email
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['open', 'pending', 'resolved', 'closed']
+      - name: priority
+        tests:
+          - accepted_values:
+              values: ['low', 'medium', 'high', 'urgent']
+
+  - name: stg_platform_partners
+    description: One row per partner. Source of truth for canonical partner names.
+    columns:
+      - name: partner_id
+        tests:
+          - unique
+          - not_null
+      - name: partner_type
+        tests:
+          - accepted_values:
+              values: ['wealth_manager', 'fund_manager', 'family_office']
+
+  - name: stg_platform_relationship_managers
+    description: One row per RM. Email lowercased for joining to Freshdesk.
+    columns:
+      - name: rm_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - unique
+          - not_null
+      - name: partner_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_platform_partners')
+              field: partner_id
+
+  - name: stg_platform_investors
+    description: >
+      One row per investor. Email lowercased. created_at converted from Excel serial.
+      relationship_manager_id is nullable (~41% null = self-directed investors).
+    columns:
+      - name: investor_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - unique
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_platform_entities')
+              field: entity_id
+
+  - name: stg_platform_entities
+    description: One row per investing entity. Belongs to one partner.
+    columns:
+      - name: entity_id
+        tests:
+          - unique
+          - not_null
+      - name: partner_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_platform_partners')
+              field: partner_id
+      - name: entity_type
+        tests:
+          - accepted_values:
+              values: ['individual', 'corporate', 'trust', 'pension_fund']
+      - name: kyc_status
+        tests:
+          - accepted_values:
+              values: ['approved', 'pending', 'expired', 'rejected']
+
+  - name: stg_platform_fund_closes
+    description: >
+      One row per fund close. scheduled_close_date converted from Excel serial.
+      close_status includes 'cancelled' (undocumented in brief, preserved).
+    columns:
+      - name: close_id
+        tests:
+          - unique
+          - not_null
+      - name: partner_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_platform_partners')
+              field: partner_id
+      - name: close_status
+        tests:
+          - accepted_values:
+              values: ['upcoming', 'completed', 'cancelled']

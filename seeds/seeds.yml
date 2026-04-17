@@ -1,0 +1,24 @@
+version: 2
+
+seeds:
+  - name: partner_label_map
+    description: >
+      Manually curated lookup mapping 70+ partner_label variants from Freshdesk
+      to canonical partner_id values from the platform. Built by exhaustively
+      profiling all unique partner_label values in the actual ticket data.
+      Covers all 15 partners across 54 rows (multiple variants per partner).
+      This seed should be maintained by the IS/data team as new label variants appear.
+    columns:
+      - name: partner_label_normalised
+        description: Lowercased, trimmed variant of partner_label as it appears in Freshdesk
+        tests:
+          - unique
+          - not_null
+      - name: partner_id
+        description: Canonical partner UUID from platform_partners
+        tests:
+          - not_null
+      - name: canonical_partner_name
+        description: Canonical partner name from platform_partners
+        tests:
+          - not_null

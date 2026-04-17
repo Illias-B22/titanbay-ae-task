@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: dim_requesters
+    description: >
+      One row per unique requester email seen in Freshdesk. Resolves each email
+      to a platform identity (investor or RM) via exact email match.
+      Requester type is one of: investor | relationship_manager | internal |
+      unknown_personal | unknown_business.
+      This is the core entity resolution model — all downstream ticket enrichment
+      flows through here.
+    columns:
+      - name: requester_email
+        tests:
+          - unique
+          - not_null
+      - name: requester_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['investor', 'relationship_manager', 'internal', 'unknown_personal', 'unknown_business']
+
+  - name: fct_tickets
+    description: >
+      One row per support ticket (internal tickets excluded). Grain: ticket_id.
+      Enriched with resolved requester identity, canonical partner, resolution time,
+      and calendar fields. Primary model for IS support analysis.
+      Partner resolved via email match first, partner_label seed as fallback.
+    columns:
+      - name: ticket_id
+        tests:
+          - unique
+          - not_null
+      - name: requester_type
+        tests:
+          - accepted_values:
+              values: ['investor', 'relationship_manager', 'unknown_personal', 'unknown_business']
+      - name: partner_resolution_source
+        tests:
+          - accepted_values:
+              values: ['email_match', 'label_fallback', 'unresolved']
+
+  - name: fct_ticket_volume_by_close
+    description: >
+      One row per fund close (cancelled excluded). Grain: close_id.
+      Aggregates ticket counts in the 30-day window before each close date,
+      broken down by partner, requester type, and priority.
+      Used for IS resourcing forecasting — upcoming closes are predictable
+      pressure points for the support team.
+    columns:
+      - name: close_id
+        tests:
+          - unique
+          - not_null

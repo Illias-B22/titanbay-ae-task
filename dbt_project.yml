@@ -1,0 +1,22 @@
+name: 'titanbay_is_support'
+version: '1.0.0'
+config-version: 2
+
+profile: 'titanbay'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+
+models:
+  titanbay_is_support:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  titanbay_is_support:
+    +schema: seeds
