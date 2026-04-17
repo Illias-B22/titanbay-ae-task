@@ -54,12 +54,14 @@ order by scheduled_close_date;
 
 ## Source Tables: What I Used and Why
 
-| `freshdesk_tickets` | Core — every ticket | Dates are Excel serials not actual timestamps; partner_label is a mess |
-| `platform_investors` | Core — resolves investor emails | Clean; email is unique |
-| `platform_relationship_managers` | Core — resolves RM emails | Clean; 42 RMs across 15 partners |
-| `platform_partners` | Source of truth for partner names/IDs | Clean; 15 rows |
-| `platform_entities` | Bridge only — links investors to partners | Not surfaced directly in final models |
-| `platform_fund_closes` | Forecasting model — close schedule | Also has Excel serial dates; has an undocumented 'cancelled' status |
+| Table | Used | Role | Reliability notes |
+|---|---|---|---|
+| `freshdesk_tickets` | Core | Every ticket raised via the platform | Dates stored as Excel serials; partner_label unreliable (see DQ section) |
+| `platform_investors` | Core | Resolves investor-raised tickets via email match | Email is unique and clean; created_at also Excel serial |
+| `platform_relationship_managers` | Core | Resolves RM-raised tickets via email match | Clean; 42 RMs across 15 partners |
+| `platform_partners` | Core | Source of truth for canonical partner names and IDs | Clean; 15 rows |
+| `platform_entities` | Bridge | Links investors to partners (investor → entity → partner) | Clean; used as join bridge only, not directly surfaced in final models |
+| `platform_fund_closes` | Mart | Provides close schedule for IS resourcing forecasting | Dates stored as Excel serials; close_status contains undocumented 'cancelled' value |
 
 **What to trust:** 
 Email matching against platform tables is the primary way we link tickets to people as the platform emails are structured and consistent. `partner_label` in Freshdesk is a last resort as it's manually typed by IS staff and has over 70 variants for 15 partners. I don't use `requester_name` as a join key at all as it's free text and names aren't unique.
