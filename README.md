@@ -1,4 +1,4 @@
-# Titanbay IS Support — Analytics Engineering Take-Home
+# Titanbay IS Support - Analytics Engineering Take-Home
 
 ## The Business Problem
 
