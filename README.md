@@ -233,12 +233,13 @@ This breaks the grain so was kept flat in `fct_tickets`.
 | `ticket_day_of_week` | 0–6 |
 | `ticket_hour_of_day` | 0–23 |
 
+
 ---
 
-## How I Used AI
-
-I used AI in this or the initial data analysis, profiling the source tables, and building out the models. It helped me move faster on things like spotting the Excel serial date issue across multiple tables, working through the entity resolution logic.
+## AI Use
+I used AI in this for the initial data analysis, profiling the source tables and building out the models. It helped me move faster on things like spotting the Excel serial date issue across multiple tables and working through the entity resolution logic.
 The data issues themselves — the serial dates, the partner_label variants, the internal QA tickets and the undocumented cancelled status actually came from profiling the data rather than just reading the brief.
+
 ---
 
 ## Reflection
