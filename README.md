@@ -64,7 +64,7 @@ order by scheduled_close_date;
 | `platform_fund_closes` | Mart | Provides close schedule for IS resourcing forecasting | Dates stored as Excel serials; close_status contains undocumented 'cancelled' value |
 
 **What to trust:** 
-Email matching against platform tables is the primary way we link tickets to people as the platform emails are structured and consistent. `partner_label` in Freshdesk is a last resort as it's manually typed by IS staff and has over 70 variants for 15 partners. I don't use `requester_name` as a join key at all as it's free text and names aren't unique.
+Email matching against platform tables is the primary way we link tickets to people as the platform emails are structured and consistent. `partner_label` in Freshdesk is a last resort as it's manually typed by IS staff and has over 70 variants for 15 partners. We don't use `requester_name` as a join key as it's free text and names aren't unique.
 
 ---
 
@@ -96,7 +96,7 @@ Staging models consist of type casting, lowercasing and fixing the date issue de
 
 ## Grain
 
-I was careful about grain throughout particularly in two places where it's easy to get it wrong.
+Needed to be careful with the grain especially in two places where it was easy to get wrong.
 
 | Model | Grain | Decision |
 |---|---|---|
@@ -110,13 +110,13 @@ The `tags` field looks like `"kyc,payment,documents"`. If we exploded that into 
 tag-level analysis needs its own model where the grain change is explicit.
 
 **The close/ticket join:** 
-`fct_ticket_volume_by_close` uses a cross join with filters inside the COUNT rather than a regular join. A regular join would fan out the closes grain. One close matching many tickets means many rows and this would break grain. To keep it at one row per close we used conditional COUNT.
+`fct_ticket_volume_by_close` uses a cross join with filters inside the COUNT rather than a regular join. A regular join would fan out the closes grain. One close matching many tickets means many rows and this would break the grain. To keep it at one row per close we used conditional COUNT.
 
 ---
 
 ## The Linkage Problem
 
-This is the core issue of the task. There's no shared foreign key between Freshdesk and the platform, the only bridge is `requester_email`.
+This is the core issue as there's no shared foreign key between Freshdesk and the platform. The only bridge is `requester_email`.
 
 ### Two types of requester
 
@@ -136,7 +136,7 @@ The classification logic in order:
 4. Personal email → `unknown_personal`
 5. Everything else → `unknown_business`
 
-Doing some analysis on the actual data on the 331 unique Freshdesk emails(we excluded Internal tickets):
+Table below is some analysis on the actual data on the 331 unique Freshdesk emails(we excluded Internal tickets):
 
 | Type | Count | % |
 |---|---|---|
@@ -149,7 +149,7 @@ Doing some analysis on the actual data on the 331 unique Freshdesk emails(we exc
 
 ### The 37 unmatched business emails
 
-Things like `abigail.taylor@west-invest.co.uk` had no match in the platform. Also, domains like `@west-invest.co.uk` doesn't reliably map to any of Titanbay's 15 partners. They were left as `unknown_business` with null partner fields so the IS team can see and investigate them.
+Things like `abigail.taylor@west-invest.co.uk` had no match in the platform. Also, domains like `@west-invest.co.uk` doesn't reliably map to any of the 15 partners. Decided to levae these as `unknown_business` with null partner fields so the IS team can see and investigate them.
 
 ### Partner resolution in `fct_tickets`
 
@@ -164,19 +164,25 @@ The `partner_resolution_source` column flags which method was used: `email_match
 ## Data Quality Issues
 
 ### 1. Excel serial dates
-`created_at` and `resolved_at` in `freshdesk_tickets`, `created_at` in `platform_investors` and `scheduled_close_date` in `platform_fund_closes` are all stored as numbers like `45941.0` rather than actual dates.
+`freshdesk_tickets`(created_at & resolved_at), `platform_investors`(created_at) and 'platform_fund_closes`(`scheduled_close_date`) all stored as numbers like `45941.0` rather than actual dates.
 
-Fix: `dateadd('day', value::integer, '1899-12-30'::date)` in the staging models. A long-term action would be to pull these directly from the Freshdesk API and the platform DB.
+Fix: `dateadd('day', value::integer, '1899-12-30'::date)` in the staging models. 
+
+Long-term: pull these directly from the Freshdesk API and the platform DB.
 
 ### 2. partner_label has 70+ variants for 15 partners
 "CLEARWATER DIRECT", "Clearwater D", "clearwater direct", "Clearwater" are all the same partner. About 44% of tickets have no label at all.
 
-Fix: lowercased in staging and then resolved with the seed lookup we built by going through every unique value in the actual data. Where both email match and label lookup fail the partner stays null and is flagged as `unresolved`. Long-term: this field should be a dropdown that is auto-filled from the requester's platform profile.
+Fix: lowercase these in staging and then resolve with the seed lookup we built by going through every unique value in the actual data. Where both email match and label lookup fail the partner stays null and is flagged as `unresolved`. 
+
+Long-term: this field should be a dropdown that is auto-filled from the requester's platform profile.
 
 ### 3. Internal QA tickets mixed in with live data
 About 44 Titanbay-domain emails appear in the ticket data. Subjects like "Internal QA test" distorts things.
 
-Fix: flagged as `is_internal = true` in staging part and filtered out in `fct_tickets`. Long-term: internal testing should be in a separate Freshdesk queue.
+Fix: flagged as `is_internal = true` in staging part and filtered out in `fct_tickets`. 
+
+Long-term: internal testing should be in a separate Freshdesk queue.
 
 ### 4. 'cancelled' close status not in the data dictionary
 `platform_fund_closes` has a `close_status = 'cancelled'` that isn't documented. Cancelled closes don't generate investor activity so they're excluded from the forecasting model.
@@ -190,7 +196,7 @@ This breaks the grain so was kept flat in `fct_tickets`.
 
 1. If the same email appears in both the investor and RM tables then the investor obvioulsy takes priority.
 
-2. There's no reliable way to get  which investor an RM was raising a ticket for from the data. The IS team needs to add an "acting on behalf of" field to Freshdesk.
+2. There's no reliable way to get  which investor an RM was raising a ticket for from the data. The IS team needs to add an "acting_on_behalf_of" field to Freshdesk.
 
 3. The `partner_label_map` seed is based on what's in this dataset. New variants will appear and the seed will need to be maintainined.
 
